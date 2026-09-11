@@ -13,7 +13,7 @@ export function openDb(dataDir) {
       id text primary key,
       name text not null,
       kind text default '',
-      intent text default '',
+      image text default '',
       sort integer default 0
     );
     create table if not exists tiles (
@@ -44,6 +44,11 @@ export function openDb(dataDir) {
     create index if not exists tiles_board on tiles(board_id, sort);
   `);
 
+  // `create table if not exists` does nothing to a table that already exists, so
+  // columns added after the first release have to be alter-tabled in by hand.
+  const cols = db.prepare("pragma table_info(boards)").all().map(c => c.name);
+  if (!cols.includes("image")) db.exec("alter table boards add column image text default ''");
+
   seedIfEmpty(db);
   return db;
 }
@@ -53,12 +58,9 @@ function seedIfEmpty(db) {
   if (n > 0) return;
 
   const boards = [
-    ["cinderella", "Cinderella", "Pantomime", 1,
-      "Saturated colour and hard changes. The transformation is the one moment the lighting and sound have to sell entirely on their own, so everything before it stays warmer and simpler to make the contrast bigger."],
-    ["two", "Two", "Jim Cartwright", 2,
-      "Naturalistic tungsten look with practicals doing most of the work. Tight specials isolate characters when they step out of the pub, and sound is almost entirely ambience so the silences count."],
-    ["devised", "Devised piece", "Original work", 3,
-      "Write this once the group has a starting point."],
+    ["cinderella", "Cinderella", "Pantomime", 1],
+    ["two", "Two", "Jim Cartwright", 2],
+    ["devised", "Devised piece", "Original work", 3],
   ];
   const gels = [
     ["L201", "Full CT blue", "#7fa6d9"], ["L106", "Primary red", "#d8262a"],
@@ -80,7 +82,7 @@ function seedIfEmpty(db) {
     ["devised", "note", "Starting question", "What do we want the audience to feel in the first 30 seconds before anyone speaks?", "notes", {}],
   ];
 
-  const insBoard = db.prepare("insert into boards (id,name,kind,sort,intent) values (?,?,?,?,?)");
+  const insBoard = db.prepare("insert into boards (id,name,kind,sort) values (?,?,?,?)");
   const insGel = db.prepare("insert into gels (id,code,name,hex,sort) values (?,?,?,?,?)");
   const insTile = db.prepare("insert into tiles (id,board_id,type,title,note,tag,sort,data) values (?,?,?,?,?,?,?,?)");
   db.transaction(() => {

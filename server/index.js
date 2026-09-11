@@ -65,6 +65,8 @@ app.use("/api", (req, res, next) => (req.method === "GET" ? next() : auth.requir
 
 const str = (v, max = 4000) => (typeof v === "string" ? v.slice(0, max) : "");
 const slug = s => str(s, 60).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+// board banners are always our own uploads, never an arbitrary external URL
+const cleanUploadUrl = v => (typeof v === "string" && v.startsWith("/uploads/") && !v.includes("..") ? v.slice(0, 2000) : "");
 
 /* boards */
 app.post("/api/boards", (req, res) => {
@@ -73,8 +75,8 @@ app.post("/api/boards", (req, res) => {
   let id = slug(req.body.id || name) || newId().slice(0, 8);
   if (db.prepare("select 1 from boards where id=?").get(id)) id = `${id}-${newId().slice(0, 4)}`;
   const sort = (db.prepare("select coalesce(max(sort),0) as m from boards").get().m) + 1;
-  db.prepare("insert into boards (id,name,kind,intent,sort) values (?,?,?,?,?)")
-    .run(id, name, str(req.body.kind, 120), str(req.body.intent), sort);
+  db.prepare("insert into boards (id,name,kind,image,sort) values (?,?,?,?,?)")
+    .run(id, name, str(req.body.kind, 120), cleanUploadUrl(req.body.image), sort);
   res.json(db.prepare("select * from boards where id=?").get(id));
 });
 app.put("/api/boards/:id", (req, res) => {
@@ -83,12 +85,15 @@ app.put("/api/boards/:id", (req, res) => {
   const patch = {
     name: req.body.name !== undefined ? str(req.body.name, 120).trim() || b.name : b.name,
     kind: req.body.kind !== undefined ? str(req.body.kind, 120) : b.kind,
-    intent: req.body.intent !== undefined ? str(req.body.intent) : b.intent,
+    image: req.body.image !== undefined ? cleanUploadUrl(req.body.image) : b.image,
   };
-  db.prepare("update boards set name=?,kind=?,intent=? where id=?").run(patch.name, patch.kind, patch.intent, b.id);
+  // a replaced or cleared banner leaves its file behind otherwise
+  if (b.image && b.image !== patch.image) removeUpload(b.image);
+  db.prepare("update boards set name=?,kind=?,image=? where id=?").run(patch.name, patch.kind, patch.image, b.id);
   res.json(db.prepare("select * from boards where id=?").get(b.id));
 });
 app.delete("/api/boards/:id", (req, res) => {
+  // the whole board upload folder goes below, which covers the banner too
   const tiles = db.prepare("select data from tiles where board_id=?").all(req.params.id).map(rowTile);
   tiles.forEach(t => removeUpload(t.data?.path));
   const r = db.prepare("delete from boards where id=?").run(req.params.id);

@@ -6,7 +6,7 @@ Handoff for working on this repo. Read this before touching anything.
 
 A self-hosted moodboard for Hayden Stevens, a BTEC Level 3 Production Arts student (lighting and sound). One board per production for Unit C (Cinderella, *Two* by Jim Cartwright, a devised piece, then a final production). Public can view, one owner login can edit. It will be hosted on Hayden's Proxmox server and linked from his personal site.
 
-Built 11 Sept 2026. First commit is a complete, tested v1. Revised the same day: Production Arts Practice wordmark, intention moved to a hero card, board blurbs dropped, real audio player.
+Built 11 Sept 2026. First commit is a complete, tested v1. Revised the same day: Production Arts Practice logo, board banner images, filter tabs moved out of the sidebar, board blurbs and the intention statement dropped, real audio player.
 
 ## Stack, on purpose kept small
 
@@ -42,7 +42,11 @@ Tile `data` is JSON, validated by `cleanData()` in `server/index.js`. Fields in 
 - `gel`, `hex`, `rgbw` `{r,g,b,w}` for light tiles (snapshotted from the gel at save time so deleting a gel doesn't break tiles)
 - `colors` array of hex for palette tiles
 
-Boards have `id`, `name`, `kind`, `intent`, `sort`. There used to be a `blurb` (a one-line subtitle under the board name); Hayden asked for it gone, so it is out of the schema, the API and the front end. Databases created before that still have the orphan column and nothing reads it.
+Boards have `id`, `name`, `kind`, `image`, `sort`. `image` is the banner behind the board name, always one of our own `/uploads/...` paths (`cleanUploadUrl()` rejects anything else, so a board banner can't be pointed at a third-party URL).
+
+There used to be a `blurb` (a one-line subtitle) and an `intent` (the design intention statement). Hayden asked for both gone, so they are out of the schema, the API and the front end. Databases created before that keep the orphan columns and nothing reads them, so the old intention text is still recoverable from a live database if he ever wants it back.
+
+`openDb()` ends with a small hand-rolled migration: `create table if not exists` does nothing to an existing table, so any column added after the first release needs an explicit `alter table`. That is how `image` reaches a database that predates it. Add to that block, don't assume a schema edit is enough.
 
 Gels: `code` is unique and uppercased. `rgbw` is nullable. `hex` is the screen colour; for RGBW gels it's computed by `rgbwToHex()` in the front end (white channel blended in linearly, an approximation, and it says so in the UI).
 
@@ -62,8 +66,9 @@ Front end keeps state in memory, calls the API, and re-renders. `renderAll()` is
 - Modal is centred by flex on `#overlay`. Keep it that way; Hayden asked for it specifically.
 - Dark background is deliberate: lighting colours are meant to read like gels against a dark stage. Don't add a light theme without being asked.
 - One structural rule from the design pass: tiles carry the colour, chrome stays quiet.
-- The intention is a hero card (`#hero`) at the top of the board, not a sidebar box. Signed out it renders as read-only text and hides itself when empty; signed in it is a textarea that saves on change. There is deliberately no "Intention" heading and no assessment-criteria caption: Hayden asked for both to go.
-- The sidebar wordmark is an inline SVG, two `<text>` lines with `textLength="240"` and `lengthAdjust="spacingAndGlyphs"` so both lines justify to the same width. It needs an explicit `font-size` in the CSS: without one it inherits the body's 15px and `textLength` stretches the glyphs to roughly twice their natural width.
+- Board layout is banner, filter tabs, tiles. `.boardhead` carries the banner as a CSS background with a gradient `::after` so the name stays legible over any photo, and gets `.has-image` only when the board actually has one. The filter tabs live in `.filterbar` under it, not in the sidebar.
+- The sidebar logo is `public/logo.svg`, Hayden's own artwork. If that file is missing the `onerror` on the `<img>` falls back to the inline SVG wordmark, which is two `<text>` lines with `textLength="240"` and `lengthAdjust="spacingAndGlyphs"` so both justify to the same width. That fallback needs an explicit `font-size` in the CSS: without one it inherits the body's 15px and `textLength` stretches the glyphs to about twice their natural width.
+- That fallback uses `removeAttribute("hidden")`, not `.hidden = false`. `hidden` is an `HTMLElement` property and `<svg>` is an `SVGElement`, so assigning to `.hidden` silently sets a useless JS expando while the attribute, and `[hidden]{display:none}`, stay put.
 - Sound tiles with a file render `.wave.player`: a play button, 28 bars that double as a scrubber, and a hidden `<audio>`. `initPlayers()` binds one delegated capture listener per root (`#board` and `#overlay`) because `timeupdate` and friends don't bubble. Tiles without a file keep the decorative `.wave.static`.
 
 ## Writing style for anything user-facing
