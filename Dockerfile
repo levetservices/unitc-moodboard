@@ -9,9 +9,12 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY server ./server
 COPY public ./public
 COPY scripts ./scripts
-RUN mkdir -p /data && chown node:node /data
-USER node
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENV PORT=3000 DATA_DIR=/data
 EXPOSE 3000
 VOLUME ["/data"]
+# Starts as root only to fix ownership of the /data mount, then drops to the
+# node user. The app itself never runs as root. See docker-entrypoint.sh.
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server/index.js"]
