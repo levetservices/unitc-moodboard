@@ -16,7 +16,7 @@ Built 11 Sept 2026. First commit is a complete, tested v1. Revised the same day:
 - `public/index.html`: the whole front end. Vanilla JS, no framework, no build step. Fonts from Google (Quando for display, Plus Jakarta Sans for body, Archivo for the wordmark).
 - `scripts/smoke-test.mjs`: starts a throwaway server on port 3999 and checks the API end to end. `npm test`. Keep it green.
 - `scripts/hash-password.mjs`: prints an `ADMIN_PASSWORD_HASH` line for `.env`.
-- Docker: `Dockerfile` (node:22-bookworm-slim, runs as `node`, data in `/data`) and `docker-compose.yml` (binds `./data`).
+- Docker: `Dockerfile` (node:22-bookworm-slim), `docker-entrypoint.sh` (fixes `/data` ownership, then drops to `node`) and `docker-compose.yml` (binds `./data`).
 
 No TypeScript, no bundler, no ORM. Don't add them without asking.
 
@@ -88,6 +88,7 @@ Nobody has asked for these yet. Confirm before building.
 
 ## Things to watch
 
+- `/data` is a bind mount, which shadows whatever the image did to that path, so it arrives owned by the host's user (root). `docker-entrypoint.sh` starts as root purely to chown it, then drops to `node` with `setpriv`. Without that the container crash-loops on `EACCES: mkdir '/data/uploads'`, nothing listens, and anything proxying to it returns 502. Docker Desktop on a Mac fakes bind mount ownership and hides this, so test container changes on Linux or against a root-owned named volume.
 - `better-sqlite3` is a native module, pinned to ^13. Versions before 12 use V8 APIs that Node 26 removed, so 11.x cannot even compile on a current Mac. The Dockerfile uses glibc (bookworm) so prebuilt binaries work. Switching to alpine will probably break the build.
 - `npm audit` reports two moderate `qs` advisories that cannot be fixed on Express 4: 4.22.2 is the last of the line and it pins a vulnerable `qs` range. Only an Express 5 migration clears them. Not done, not urgent at this scale.
 - `multer` is still on 1.4.5-lts.2, which is end of life. 2.x exists when someone wants to do it.
