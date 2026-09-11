@@ -73,8 +73,8 @@ app.post("/api/boards", (req, res) => {
   let id = slug(req.body.id || name) || newId().slice(0, 8);
   if (db.prepare("select 1 from boards where id=?").get(id)) id = `${id}-${newId().slice(0, 4)}`;
   const sort = (db.prepare("select coalesce(max(sort),0) as m from boards").get().m) + 1;
-  db.prepare("insert into boards (id,name,kind,blurb,intent,sort) values (?,?,?,?,?,?)")
-    .run(id, name, str(req.body.kind, 120), str(req.body.blurb, 400), str(req.body.intent), sort);
+  db.prepare("insert into boards (id,name,kind,intent,sort) values (?,?,?,?,?)")
+    .run(id, name, str(req.body.kind, 120), str(req.body.intent), sort);
   res.json(db.prepare("select * from boards where id=?").get(id));
 });
 app.put("/api/boards/:id", (req, res) => {
@@ -83,10 +83,9 @@ app.put("/api/boards/:id", (req, res) => {
   const patch = {
     name: req.body.name !== undefined ? str(req.body.name, 120).trim() || b.name : b.name,
     kind: req.body.kind !== undefined ? str(req.body.kind, 120) : b.kind,
-    blurb: req.body.blurb !== undefined ? str(req.body.blurb, 400) : b.blurb,
     intent: req.body.intent !== undefined ? str(req.body.intent) : b.intent,
   };
-  db.prepare("update boards set name=?,kind=?,blurb=?,intent=? where id=?").run(patch.name, patch.kind, patch.blurb, patch.intent, b.id);
+  db.prepare("update boards set name=?,kind=?,intent=? where id=?").run(patch.name, patch.kind, patch.intent, b.id);
   res.json(db.prepare("select * from boards where id=?").get(b.id));
 });
 app.delete("/api/boards/:id", (req, res) => {

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moodboard: Unit C</title>
-<link href="https://fonts.googleapis.com/css2?family=Quando&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Production Arts Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700&family=Quando&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --stage:#14161a; --wing:#1c1f25; --ink:#f5f3ee; --paper:#ebe7df;
@@ -22,8 +22,8 @@
   .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
   aside{border-right:1px solid var(--line);padding:28px 22px;display:flex;flex-direction:column;gap:26px;position:sticky;top:0;height:100vh;overflow:auto}
   main{padding:28px 32px 80px}
-  h1{font-family:"Quando",Georgia,serif;font-weight:400;font-size:26px;line-height:1.15}
-  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .wordmark{display:block;width:100%;height:auto;fill:currentColor}
+  .wordmark text{font-family:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:700;font-size:41px}
 
   .prods{display:flex;flex-direction:column;gap:4px}
   .prod{text-align:left;padding:10px 12px;border-radius:var(--r);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -31,10 +31,10 @@
   .prod[aria-pressed="true"]{background:var(--paper);color:var(--stage)}
   .prod .n{font-weight:600}.prod .c{font-size:12px;opacity:.7}
 
-  .intent{background:var(--wing);border-radius:var(--r);padding:14px}
-  .intent h2{font-size:13px;font-weight:600;margin-bottom:6px}
-  .intent textarea,.intent p{width:100%;background:transparent;border:0;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.55;resize:vertical;min-height:90px}
-  .intent .crit{font-size:12px;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:8px;min-height:0}
+  .hero{background:var(--wing);border-left:3px solid var(--paper);border-radius:var(--r);padding:22px 26px;margin-bottom:22px}
+  .hero p,.hero textarea{font-family:"Quando",Georgia,serif;font-weight:400;font-size:19px;line-height:1.5;color:var(--ink);max-width:64ch}
+  .hero textarea{width:100%;background:transparent;border:0;resize:vertical;min-height:96px;display:block}
+  .hero textarea::placeholder{color:var(--muted);font-style:italic}
 
   .filters{display:flex;flex-wrap:wrap;gap:6px}
   .pill{padding:6px 11px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted)}
@@ -50,7 +50,6 @@
 
   .boardhead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:16px;flex-wrap:wrap}
   .boardhead h2{font-family:"Quando",Georgia,serif;font-weight:400;font-size:34px;line-height:1.1}
-  .boardhead p{color:var(--muted);font-size:13px;margin-top:4px}
   .count{color:var(--muted);font-size:13px}
 
   .board{columns:3;column-gap:14px}
@@ -66,7 +65,6 @@
   .tile:hover .pin,.tile.pinned .pin,.tile .pin:focus-visible{opacity:1}
 
   .img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block}
-  video.img{aspect-ratio:16/9;background:#000}
   .embed{aspect-ratio:16/9;width:100%;border:0;display:block;background:#000}
   .ph{aspect-ratio:4/3;display:grid;place-items:center;color:rgba(255,255,255,.55);font-size:12px;text-align:center;padding:16px;background:linear-gradient(135deg,#2a2e36,#14161a)}
   .gel{height:150px;position:relative}
@@ -76,16 +74,26 @@
   .swatches{display:flex;height:96px}
   .sw{flex:1;position:relative}.sw:hover{flex:1.6}
   .sw span{position:absolute;left:6px;bottom:6px;font-size:10px;font-weight:600;color:#fff;mix-blend-mode:difference;opacity:0}.sw:hover span{opacity:1}
-  .wave{height:96px;display:flex;align-items:center;gap:2px;padding:0 14px;background:#0a0b0e}
-  .wave i{flex:1;background:var(--paper);border-radius:2px;opacity:.85;height:var(--h)}
-  audio.player{width:100%;display:block;background:#0a0b0e;padding:10px 8px 6px}
+  .wave{height:96px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#0a0b0e}
+  .wave .bars{flex:1;display:flex;align-items:center;gap:2px;height:64px;min-width:0}
+  .wave i{flex:1;background:var(--paper);border-radius:2px;opacity:.28;height:var(--h);transition:opacity .12s}
+  .wave i.on{opacity:.9}
+  .wave.static i{opacity:.85}
+  .player{cursor:pointer}
+  .player .bars{cursor:col-resize}
+  .player .play{width:38px;height:38px;flex:none;border-radius:50%;background:var(--paper);color:var(--stage);display:grid;place-items:center;font-size:13px;line-height:1}
+  .player audio{display:none}
+  .player .time{flex:none;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);min-width:34px;text-align:right}
+  video.img{aspect-ratio:16/9;background:#000;object-fit:contain}
   .filecard,.linkcard{display:flex;gap:12px;align-items:center;padding:16px 14px;background:#0a0b0e;text-decoration:none}
   .filecard .ico,.linkcard .ico{width:42px;height:42px;border-radius:8px;background:var(--wing);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--paper);flex:none;text-transform:uppercase}
   .filecard .meta,.linkcard .meta{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tile.note-tile{background:var(--paper);color:var(--stage);border-color:var(--paper)}
   .tile.note-tile h3{font-family:"Quando",Georgia,serif;font-weight:400;font-size:17px}
   .tile.note-tile .note{color:#4a4d54}
-  .tile.note-tile .tag{background:rgba(0,0,0,.08);color:var(--stage)}
+  /* note tiles have no media for the badge to sit on, so it goes in the flow instead */
+  .tile.note-tile .tag{position:static;display:inline-block;background:rgba(0,0,0,.08);color:var(--stage);margin:12px 14px 0}
+  .tile.note-tile .body{padding-top:8px}
   .tile.note-tile .pin{background:rgba(0,0,0,.1)}
   .empty{color:var(--muted);padding:60px 0;text-align:center;font-size:14px}
 
@@ -135,17 +143,12 @@
 <div class="banner" id="banner" hidden></div>
 <div class="app">
   <aside>
-    <div>
-      <h1>Lighting and sound moodboard</h1>
-      <p class="sub">Hayden Stevens. Unit C, Task 1.</p>
-    </div>
+    <svg class="wordmark" viewBox="0 0 240 70" role="img" aria-label="Production Arts Practice">
+      <text x="0" y="29.5" textLength="240" lengthAdjust="spacingAndGlyphs">PRODUCTION</text>
+      <text x="0" y="64.4" textLength="240" lengthAdjust="spacingAndGlyphs">ARTS PRACTICE</text>
+    </svg>
     <div class="prods" id="prods"></div>
     <button class="ghost" id="boardBtn" hidden>Add or edit productions</button>
-    <div class="intent">
-      <h2>Intention</h2>
-      <textarea id="intent" aria-label="Design intention for this production"></textarea>
-      <p class="crit">Evidence for C7.2: applying creative processes with awareness of what the production needs.</p>
-    </div>
     <div class="filters" id="filters"></div>
     <div class="side-actions">
       <button class="add" id="addBtn" hidden>Add a tile</button>
@@ -156,9 +159,13 @@
   </aside>
   <main>
     <div class="boardhead">
-      <div><h2 id="title"></h2><p id="blurb"></p></div>
+      <h2 id="title"></h2>
       <span class="count" id="count"></span>
     </div>
+    <section class="hero" id="hero" hidden>
+      <p id="intentRead"></p>
+      <textarea id="intent" aria-label="Design intention for this production" hidden></textarea>
+    </section>
     <div class="board" id="board"><p class="empty">Loading the board.</p></div>
   </main>
 </div>
@@ -200,6 +207,34 @@ function embedUrl(u){
 function rgbwToHex(r,g,b,w){ const mix=c=>Math.round(c+(255-c)*(w/255)); return "#"+[mix(r),mix(g),mix(b)].map(v=>v.toString(16).padStart(2,"0")).join(""); }
 function fileExt(name){ return (name||"").split(".").pop().slice(0,4); }
 
+/* ---------- audio player ---------- */
+function fmtTime(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintPlayer(w){
+  const a=w.querySelector("audio"); if(!a) return;
+  const bars=[...w.querySelectorAll(".bars i")];
+  const frac=a.duration?a.currentTime/a.duration:0;
+  bars.forEach((b,i)=>b.classList.toggle("on",(i+1)/bars.length<=frac));
+  w.querySelector(".time").textContent=fmtTime(a.currentTime);
+  w.querySelector(".play").innerHTML=a.paused?"&#9654;":"&#10073;&#10073;";
+}
+function initPlayers(root){
+  root.addEventListener("click",e=>{
+    const w=e.target.closest(".player"); if(!w) return;
+    e.stopPropagation();
+    const a=w.querySelector("audio"); if(!a) return;
+    const bars=e.target.closest(".bars");
+    if(bars&&a.duration){
+      const r=bars.getBoundingClientRect();
+      a.currentTime=Math.min(a.duration,Math.max(0,(e.clientX-r.left)/r.width*a.duration));
+      return;
+    }
+    if(a.paused){ document.querySelectorAll(".player audio").forEach(o=>{ if(o!==a) o.pause(); }); a.play().catch(()=>toast("Could not play that file.")); }
+    else a.pause();
+  },true);
+  ["timeupdate","play","pause","loadedmetadata","ended"].forEach(ev=>
+    root.addEventListener(ev,e=>{ const w=e.target.closest?.(".player"); if(w) paintPlayer(w); },true));
+}
+
 /* ---------- api ---------- */
 async function api(method, path, body){
   const r = await fetch(path,{method,headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined,credentials:"same-origin"});
@@ -229,8 +264,6 @@ async function loadAll(){
 function renderSidebar(){
   $("#prods").innerHTML = boards.map(b=>`<button class="prod" data-k="${esc(b.id)}" aria-pressed="${b.id===current}"><span class="n">${esc(b.name)}</span><span class="c">${esc(b.kind||"")}</span></button>`).join("");
   $("#filters").innerHTML = FILTERS.map(f=>`<button class="pill" data-f="${f}" aria-pressed="${f===filter}">${f[0].toUpperCase()+f.slice(1)}</button>`).join("");
-  const b=boards.find(x=>x.id===current);
-  const ta=$("#intent"); ta.value=b?.intent||""; ta.readOnly=!canEdit(); ta.placeholder=canEdit()?"What is the lighting and sound trying to do?":"";
   $("#addBtn").hidden=!canEdit(); $("#gelBtn").hidden=!canEdit(); $("#boardBtn").hidden=!canEdit();
   $("#authBtn").textContent = user ? "Sign out" : "Sign in to edit";
   $("#who").textContent = user ? `Editing as ${user}` : "";
@@ -242,10 +275,14 @@ function media(t){
       const g=gelByCode(d.gel); const hex=d.hex||g?.hex||"#888"; const rgbw=d.rgbw||g?.rgbw;
       return `<div class="gel" style="background:${esc(hex)};box-shadow:inset 0 0 60px rgba(0,0,0,.35)"><div class="beam"></div>${rgbw?`<span class="rgbw">R${rgbw.r} G${rgbw.g} B${rgbw.b} W${rgbw.w}</span>`:""}<span class="code">${esc(d.gel||"")}</span></div>`;
     }
-    case "sound": return d.url ? `<audio class="player" controls preload="none" src="${esc(d.url)}"></audio>` : `<div class="wave">${waveBars(hashStr(t.id)%1000)}</div>`;
+    case "sound": {
+      const bars=`<div class="bars">${waveBars(hashStr(t.id)%1000)}</div>`;
+      if(!d.url) return `<div class="wave static">${bars}</div>`;
+      return `<div class="wave player"><button class="play" aria-label="Play ${esc(t.title)}">&#9654;</button>${bars}<span class="time">0:00</span><audio preload="metadata" src="${esc(d.url)}"></audio></div>`;
+    }
     case "video": {
       if(!d.url) return `<div class="ph">No video yet. Open the tile to upload or paste a link.</div>`;
-      const e=embedUrl(d.url); return e ? `<iframe class="embed" src="${esc(e)}" allowfullscreen loading="lazy" title="${esc(t.title)}"></iframe>` : `<video class="img" controls preload="metadata" src="${esc(d.url)}"></video>`;
+      const e=embedUrl(d.url); return e ? `<iframe class="embed" src="${esc(e)}" allowfullscreen loading="lazy" title="${esc(t.title)}"></iframe>` : `<video class="img" controls playsinline preload="metadata" src="${esc(d.url)}"></video>`;
     }
     case "image": return d.url ? `<img class="img" src="${esc(d.url)}" alt="${esc(t.title)}" loading="lazy">` : `<div class="ph">No image yet. Open the tile to upload or paste a link.</div>`;
     case "palette": return `<div class="swatches">${(d.colors||[]).map(c=>`<div class="sw" style="background:${esc(c)}" data-hex="${esc(c)}"><span>${esc(c)}</span></div>`).join("")}</div>`;
@@ -263,12 +300,22 @@ function tileHTML(t,forPreview){
 }
 function renderBoard(){
   const b=boards.find(x=>x.id===current);
-  if(!b){ $("#title").textContent=""; $("#blurb").textContent=""; $("#count").textContent=""; $("#board").innerHTML=`<p class="empty">No productions yet.${canEdit()?" Add one from the sidebar.":""}</p>`; return; }
-  $("#title").textContent=b.name; $("#blurb").textContent=b.blurb||"";
+  if(!b){ $("#title").textContent=""; $("#count").textContent=""; $("#hero").hidden=true; $("#board").innerHTML=`<p class="empty">No productions yet.${canEdit()?" Add one from the sidebar.":""}</p>`; return; }
+  $("#title").textContent=b.name; renderHero(b);
   const all=boardTiles();
   const list=all.filter(t=>filter==="all"||t.tag===filter).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   $("#count").textContent=`${list.length} of ${all.length} tiles`;
   $("#board").innerHTML=list.length?list.map(t=>tileHTML(t)).join(""):`<p class="empty">Nothing tagged ${filter} yet.${canEdit()?" Add a tile to start.":""}</p>`;
+}
+function renderHero(b){
+  const ta=$("#intent"), read=$("#intentRead");
+  if(canEdit()){
+    $("#hero").hidden=false; read.hidden=true; ta.hidden=false;
+    ta.value=b.intent||""; ta.placeholder="What is the lighting and sound trying to do?";
+  }else{
+    ta.hidden=true; read.hidden=false; read.textContent=(b.intent||"").trim();
+    $("#hero").hidden=!read.textContent;
+  }
 }
 function renderAll(){ renderSidebar(); renderBoard(); }
 
@@ -366,7 +413,6 @@ function openBoards(){
       <div class="field"><label for="b-name">Name</label><input id="b-name" placeholder="Cinderella"></div>
       <div class="field"><label for="b-kind">Type</label><input id="b-kind" placeholder="Pantomime"></div>
     </div>
-    <div class="field"><label for="b-blurb">One line about it</label><input id="b-blurb" placeholder="Big, warm and fast."></div>
     <p class="err" id="f-err"></p>
     <div class="actions"><span></span><button class="btn primary" data-addboard>Add production</button></div>`);
 }
@@ -377,7 +423,6 @@ function openEditBoard(id){
       <div class="field"><label for="b-name">Name</label><input id="b-name" value="${esc(b.name)}"></div>
       <div class="field"><label for="b-kind">Type</label><input id="b-kind" value="${esc(b.kind||"")}"></div>
     </div>
-    <div class="field"><label for="b-blurb">One line about it</label><input id="b-blurb" value="${esc(b.blurb||"")}"></div>
     <p class="err" id="f-err"></p>
     <div class="actions"><button class="btn danger" data-delboard="${esc(b.id)}">Delete production and its tiles</button><button class="btn primary" data-saveboard="${esc(b.id)}">Save changes</button></div>`);
 }
@@ -442,9 +487,9 @@ $("#overlay").addEventListener("click",async e=>{
       else { const v=Object.fromEntries(["r","g","b","w"].map(c=>[c,Math.max(0,Math.min(255,+$("#g-"+c).value||0))])); body.rgbw=v; body.hex=rgbwToHex(v.r,v.g,v.b,v.w); }
       busy(); const g=await api("POST","/api/gels",body); gels.push(g); toast(`${code} added`); openGels(); }
     else if(btn?.dataset.rmgel!==undefined){ await api("DELETE",`/api/gels/${btn.dataset.rmgel}`); gels=gels.filter(g=>g.id!=btn.dataset.rmgel); openGels(); }
-    else if(btn?.dataset.addboard!==undefined){ busy(); const b=await api("POST","/api/boards",{name:$("#b-name").value,kind:$("#b-kind").value,blurb:$("#b-blurb").value}); boards.push(b); current=b.id; closeModal(); renderAll(); toast("Production added"); }
+    else if(btn?.dataset.addboard!==undefined){ busy(); const b=await api("POST","/api/boards",{name:$("#b-name").value,kind:$("#b-kind").value}); boards.push(b); current=b.id; closeModal(); renderAll(); toast("Production added"); }
     else if(btn?.dataset.editboard!==undefined){ openEditBoard(btn.dataset.editboard); }
-    else if(btn?.dataset.saveboard!==undefined){ busy(); const b=await api("PUT",`/api/boards/${btn.dataset.saveboard}`,{name:$("#b-name").value,kind:$("#b-kind").value,blurb:$("#b-blurb").value}); Object.assign(boards.find(x=>x.id===b.id),b); closeModal(); renderAll(); toast("Saved"); }
+    else if(btn?.dataset.saveboard!==undefined){ busy(); const b=await api("PUT",`/api/boards/${btn.dataset.saveboard}`,{name:$("#b-name").value,kind:$("#b-kind").value}); Object.assign(boards.find(x=>x.id===b.id),b); closeModal(); renderAll(); toast("Saved"); }
     else if(btn?.dataset.delboard!==undefined){ if(!confirm("Delete this production and every tile and file on it?")) return; busy(); await api("DELETE",`/api/boards/${btn.dataset.delboard}`); boards=boards.filter(b=>b.id!==btn.dataset.delboard); tiles=tiles.filter(t=>t.board_id!==btn.dataset.delboard); current=boards[0]?.id||null; closeModal(); renderAll(); toast("Production deleted"); }
     else if(btn?.dataset.login!==undefined){ busy(); const r=await api("POST","/api/login",{username:$("#au-user").value.trim(),password:$("#au-pass").value}); user=r.user; closeModal(); await loadAll(); renderAll(); toast("Signed in"); }
   }catch(ex){ unbusy(); if(err) err.textContent=ex.message||"Something went wrong."; else toast(ex.message); }
@@ -452,6 +497,7 @@ $("#overlay").addEventListener("click",async e=>{
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
 
 /* ---------- boot ---------- */
+initPlayers($("#board")); initPlayers($("#overlay"));
 (async()=>{ await loadAll(); renderAll(); })();
 </script>
 </body>

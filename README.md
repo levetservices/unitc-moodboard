@@ -2,7 +2,7 @@
 
 A self-hosted lighting and sound moodboard. Anyone can view it. One owner login can add, edit, reorder and delete. Files (audio, video, photos, PDFs) are stored on the server. Nothing depends on a third-party service.
 
-Built for BTEC Production Arts Unit C (Task 1): one board per production, an intention statement per board mapped to C7.2, and tiles for lighting states (with LEE gel codes or your own RGBW colours), sound cues, video, photos, palettes, links, files and notes.
+Built for BTEC Production Arts Unit C (Task 1): one board per production, an intention statement across the top of each board, and tiles for lighting states (with LEE gel codes or your own RGBW colours), sound cues, video, photos, palettes, links, files and notes. Audio and video you upload play in the tile itself.
 
 ## What's in the box
 
@@ -65,9 +65,11 @@ To show it inside your Framer site, add an Embed block with the URL, or just lin
 ## Everyday use
 
 - **Viewing**: switch productions, filter by tag, click a tile to see it large, play audio and video, open links and files.
-- **Editing**: sign in, then use the sidebar buttons. Add or edit productions, add tiles, manage gels. Drag tiles to reorder, star to pin, click to edit or delete. The intention box saves when you click away from it.
+- **Editing**: sign in, then use the sidebar buttons. Add or edit productions, add tiles, manage gels. Drag tiles to reorder, star to pin, click to edit or delete. The intention at the top of the board saves when you click away from it.
 - **Gels and colours**: add by code and name. Set the colour with the picker, or type RGBW values (0 to 255 each) for an LED fixture. RGBW numbers are stored exactly and shown on lighting tiles. The on-screen swatch is an approximation.
 - **Files**: anything up to `MAX_UPLOAD_MB`. YouTube and Vimeo links embed instead of needing an upload.
+- **Sound tiles**: upload an audio file and the waveform becomes a player. Click it to play or pause, click along the bars to scrub. Only one plays at a time.
+- **Video tiles**: upload a file and it plays in the tile with normal controls.
 
 ## Backups
 
@@ -87,20 +89,21 @@ docker compose up -d --build
 
 ## Running without Docker
 
-Node 20 or newer.
+Node 22 or newer.
 
 ```bash
 npm install
 cp .env.example .env      # then edit it
-export $(grep -v '^#' .env | xargs)
 npm start
 ```
+
+`npm start` and `npm run dev` read `.env` themselves. Don't `source .env` or `export $(cat .env)`: the password hash contains `$` signs and the shell will eat them, which looks exactly like a wrong password.
 
 ## Development
 
 ```bash
 npm install
-ADMIN_USER=dev ADMIN_PASSWORD=devpass123 npm run dev
+npm run dev               # reads .env
 npm test                  # starts a throwaway server and checks the API
 ```
 

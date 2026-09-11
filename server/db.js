@@ -13,7 +13,6 @@ export function openDb(dataDir) {
       id text primary key,
       name text not null,
       kind text default '',
-      blurb text default '',
       intent text default '',
       sort integer default 0
     );
@@ -55,13 +54,10 @@ function seedIfEmpty(db) {
 
   const boards = [
     ["cinderella", "Cinderella", "Pantomime", 1,
-      "Big, warm and fast. Every cue has to land for an audience who talk back.",
       "Saturated colour and hard changes. The transformation is the one moment the lighting and sound have to sell entirely on their own, so everything before it stays warmer and simpler to make the contrast bigger."],
     ["two", "Two", "Jim Cartwright", 2,
-      "One pub, two actors, fourteen characters. Nothing can be showy.",
       "Naturalistic tungsten look with practicals doing most of the work. Tight specials isolate characters when they step out of the pub, and sound is almost entirely ambience so the silences count."],
     ["devised", "Devised piece", "Original work", 3,
-      "Nothing decided yet. This board is for the ideas that come out of the room.",
       "Write this once the group has a starting point."],
   ];
   const gels = [
@@ -84,7 +80,7 @@ function seedIfEmpty(db) {
     ["devised", "note", "Starting question", "What do we want the audience to feel in the first 30 seconds before anyone speaks?", "notes", {}],
   ];
 
-  const insBoard = db.prepare("insert into boards (id,name,kind,sort,blurb,intent) values (?,?,?,?,?,?)");
+  const insBoard = db.prepare("insert into boards (id,name,kind,sort,intent) values (?,?,?,?,?)");
   const insGel = db.prepare("insert into gels (id,code,name,hex,sort) values (?,?,?,?,?)");
   const insTile = db.prepare("insert into tiles (id,board_id,type,title,note,tag,sort,data) values (?,?,?,?,?,?,?,?)");
   db.transaction(() => {

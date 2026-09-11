@@ -6,14 +6,14 @@ Handoff for working on this repo. Read this before touching anything.
 
 A self-hosted moodboard for Hayden Stevens, a BTEC Level 3 Production Arts student (lighting and sound). One board per production for Unit C (Cinderella, *Two* by Jim Cartwright, a devised piece, then a final production). Public can view, one owner login can edit. It will be hosted on Hayden's Proxmox server and linked from his personal site.
 
-Built 11 Sept 2026. First commit is a complete, tested v1.
+Built 11 Sept 2026. First commit is a complete, tested v1. Revised the same day: Production Arts Practice wordmark, intention moved to a hero card, board blurbs dropped, real audio player.
 
 ## Stack, on purpose kept small
 
 - `server/index.js`: Express 4. Serves `public/`, the API under `/api`, and uploaded files under `/uploads`.
 - `server/db.js`: better-sqlite3. Schema is created on first run, seed content inserted if the boards table is empty. Tables: `boards`, `tiles`, `gels`, `sessions`.
 - `server/auth.js`: scrypt password hashing (`scrypt$salt$hash`), random session tokens in an httpOnly cookie `mb_session`, in-memory login rate limiting.
-- `public/index.html`: the whole front end. Vanilla JS, no framework, no build step. Fonts from Google (Quando for display, Plus Jakarta Sans for body).
+- `public/index.html`: the whole front end. Vanilla JS, no framework, no build step. Fonts from Google (Quando for display, Plus Jakarta Sans for body, Archivo for the wordmark).
 - `scripts/smoke-test.mjs`: starts a throwaway server on port 3999 and checks the API end to end. `npm test`. Keep it green.
 - `scripts/hash-password.mjs`: prints an `ADMIN_PASSWORD_HASH` line for `.env`.
 - Docker: `Dockerfile` (node:22-bookworm-slim, runs as `node`, data in `/data`) and `docker-compose.yml` (binds `./data`).
@@ -24,11 +24,13 @@ No TypeScript, no bundler, no ORM. Don't add them without asking.
 
 ```bash
 npm install
-ADMIN_USER=dev ADMIN_PASSWORD=devpass123 npm run dev   # http://localhost:3000
+npm run dev   # reads .env, http://localhost:3000
 npm test
 ```
 
-`ADMIN_PASSWORD` is a dev convenience; production uses `ADMIN_PASSWORD_HASH`. See `.env.example`.
+`npm start` and `npm run dev` pass `--env-file-if-exists=.env` to node, so `.env` is loaded without a shell. That matters: the scrypt hash contains `$`, so `source .env` silently corrupts it and every login fails with "wrong username or password". Don't reintroduce a shell export in the docs.
+
+`ADMIN_PASSWORD` still works as a dev convenience; production uses `ADMIN_PASSWORD_HASH`. See `.env.example`.
 
 ## Data model
 
@@ -39,6 +41,8 @@ Tile `data` is JSON, validated by `cleanData()` in `server/index.js`. Fields in 
 - `url` (external link or `/uploads/...`), `path` (only set for uploads, used to delete the file), `name`, `mime`
 - `gel`, `hex`, `rgbw` `{r,g,b,w}` for light tiles (snapshotted from the gel at save time so deleting a gel doesn't break tiles)
 - `colors` array of hex for palette tiles
+
+Boards have `id`, `name`, `kind`, `intent`, `sort`. There used to be a `blurb` (a one-line subtitle under the board name); Hayden asked for it gone, so it is out of the schema, the API and the front end. Databases created before that still have the orphan column and nothing reads it.
 
 Gels: `code` is unique and uppercased. `rgbw` is nullable. `hex` is the screen colour; for RGBW gels it's computed by `rgbwToHex()` in the front end (white channel blended in linearly, an approximation, and it says so in the UI).
 
@@ -58,6 +62,9 @@ Front end keeps state in memory, calls the API, and re-renders. `renderAll()` is
 - Modal is centred by flex on `#overlay`. Keep it that way; Hayden asked for it specifically.
 - Dark background is deliberate: lighting colours are meant to read like gels against a dark stage. Don't add a light theme without being asked.
 - One structural rule from the design pass: tiles carry the colour, chrome stays quiet.
+- The intention is a hero card (`#hero`) at the top of the board, not a sidebar box. Signed out it renders as read-only text and hides itself when empty; signed in it is a textarea that saves on change. There is deliberately no "Intention" heading and no assessment-criteria caption: Hayden asked for both to go.
+- The sidebar wordmark is an inline SVG, two `<text>` lines with `textLength="240"` and `lengthAdjust="spacingAndGlyphs"` so both lines justify to the same width. It needs an explicit `font-size` in the CSS: without one it inherits the body's 15px and `textLength` stretches the glyphs to roughly twice their natural width.
+- Sound tiles with a file render `.wave.player`: a play button, 28 bars that double as a scrubber, and a hidden `<audio>`. `initPlayers()` binds one delegated capture listener per root (`#board` and `#overlay`) because `timeupdate` and friends don't bubble. Tiles without a file keep the decorative `.wave.static`.
 
 ## Writing style for anything user-facing
 
@@ -76,12 +83,15 @@ Nobody has asked for these yet. Confirm before building.
 2. Bulk upload (drop several photos, get several tiles).
 3. Search across tiles.
 4. Per-tile "which production moment" field, so a lighting state can say "Act 2 transformation" and sort by it.
-5. Optional second reader account (tutor, Mr Wagstaff) with view-only login if the board is ever made private.
+5. Optional second reader account (the tutor) with view-only login if the board is ever made private.
 6. Cue sheet tile type: a small table of cue number, trigger, description. Would map nicely to the QLab and lighting desk work in Unit C.
 
 ## Things to watch
 
-- `better-sqlite3` is a native module. The Dockerfile uses glibc (bookworm) so prebuilt binaries work. Switching to alpine will probably break the build.
+- `better-sqlite3` is a native module, pinned to ^13. Versions before 12 use V8 APIs that Node 26 removed, so 11.x cannot even compile on a current Mac. The Dockerfile uses glibc (bookworm) so prebuilt binaries work. Switching to alpine will probably break the build.
+- `npm audit` reports two moderate `qs` advisories that cannot be fixed on Express 4: 4.22.2 is the last of the line and it pins a vulnerable `qs` range. Only an Express 5 migration clears them. Not done, not urgent at this scale.
+- `multer` is still on 1.4.5-lts.2, which is end of life. 2.x exists when someone wants to do it.
+- Range requests work because `express.static` handles them, which is what makes seeking in audio and video work. Don't replace it with a hand-rolled file handler without implementing `Range`.
 - Uploads are public by URL, which is intended (visitors need to play them). Don't put anything private in there.
 - The reverse proxy's body size limit will cap uploads before `MAX_UPLOAD_MB` does. README mentions `client_max_body_size` for Nginx.
 - Login rate limiting is in memory, so it resets on restart and is per-process. Fine for one owner.

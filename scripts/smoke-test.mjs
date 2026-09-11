@@ -60,6 +60,6 @@ try {
   r = await call("GET", "/api/me");
   check(r.json.authenticated === false, "logout clears session");
   const page = await fetch(base + "/");
-  check(page.status === 200 && (await page.text()).includes("Lighting and sound moodboard"), "front end served");
+  check(page.status === 200 && (await page.text()).includes("Production Arts Practice"), "front end served");
 } catch (e) { console.error(e); process.exitCode = 1; }
 finally { srv.kill(); fs.rmSync(dataDir, { recursive: true, force: true }); }
