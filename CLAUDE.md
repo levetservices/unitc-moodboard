@@ -13,6 +13,7 @@ Built 11 Sept 2026. First commit is a complete, tested v1. Revised the same day:
 - `server/index.js`: Express 4. Serves `public/`, the API under `/api`, and uploaded files under `/uploads`.
 - `server/db.js`: better-sqlite3. Schema is created on first run, seed content inserted if the boards table is empty. Tables: `boards`, `tiles`, `gels`, `sessions`.
 - `server/auth.js`: scrypt password hashing (`scrypt$salt$hash`), random session tokens in an httpOnly cookie `mb_session`, in-memory login rate limiting.
+- `public/vendor/html-to-image.js`: html-to-image 1.11.13 (MIT, licence alongside), vendored as a plain file so there is still no build step and no CDN. Only the board export uses it.
 - `public/index.html`: the whole front end. Vanilla JS, no framework, no build step. Fonts from Google (Quando for display, Plus Jakarta Sans for body, Archivo for the wordmark).
 - `scripts/smoke-test.mjs`: starts a throwaway server on port 3999 and checks the API end to end. `npm test`. Keep it green.
 - `scripts/hash-password.mjs`: prints an `ADMIN_PASSWORD_HASH` line for `.env`.
@@ -69,6 +70,9 @@ Front end keeps state in memory, calls the API, and re-renders. `renderAll()` is
 - Board layout is banner, filter tabs, tiles. `.boardhead` carries the banner as a CSS background with a gradient `::after` so the name stays legible over any photo, and gets `.has-image` only when the board actually has one. The filter tabs live in `.filterbar` under it, not in the sidebar.
 - The sidebar logo is `public/logo.svg`, Hayden's own artwork. If that file is missing the `onerror` on the `<img>` falls back to the inline SVG wordmark, which is two `<text>` lines with `textLength="240"` and `lengthAdjust="spacingAndGlyphs"` so both justify to the same width. That fallback needs an explicit `font-size` in the CSS: without one it inherits the body's 15px and `textLength` stretches the glyphs to about twice their natural width.
 - That fallback uses `removeAttribute("hidden")`, not `.hidden = false`. `hidden` is an `HTMLElement` property and `<svg>` is an `SVGElement`, so assigning to `.hidden` silently sets a useless JS expando while the attribute, and `[hidden]{display:none}`, stay put.
+- "Export board as image" (owner only, in the filter bar) builds `.sheet` off screen at 1600px wide: dated header with logo and banner, then EVERY tile on the board whatever the filter, pinned first, notes unclipped. `buildBoardImage()` turns it into a PNG at 2x, backing off on very long boards to stay inside browser canvas limits. Things with nothing to draw are swapped first: iframes and videos become a card naming the source, `<audio>` is dropped.
+- Export traps, each one hit in testing: tile images are `loading="lazy"`, and a lazy image parked off screen never loads, so the sheet forces `eager` or any board with a photo hangs forever. Images that still fail after 6 seconds are swapped for `IMG_PLACEHOLDER` before the library runs, or it refetches them with no time limit. The library drops fonts and weights on SVG `<text>`, so the fallback wordmark is rebuilt as HTML (`wordmarkForExport()`). A hidden tab pauses the render, which only matters when testing from a background pane.
+- Sidebar owner tools are left-aligned to match the production list: one filled "Add a tile", then icon rows, then a single account line ("Signed in as ...", "Sign out"). Don't reintroduce centred ghost links.
 - Sound tiles with a file render `.wave.player`: a play button, 28 bars that double as a scrubber, and a hidden `<audio>`. `initPlayers()` binds one delegated capture listener per root (`#board` and `#overlay`) because `timeupdate` and friends don't bubble. Tiles without a file keep the decorative `.wave.static`.
 
 ## Writing style for anything user-facing
@@ -84,7 +88,7 @@ Hayden's preferences, they matter:
 
 Nobody has asked for these yet. Confirm before building.
 
-1. Export a board to PDF for the Unit C visual diary (the assessed evidence for C7.2). Server-side render of tiles plus intention would do.
+1. Export every production in one go, or keep a server-side history of dated snapshots, if one board at a time gets tedious.
 2. Bulk upload (drop several photos, get several tiles).
 3. Search across tiles.
 4. Per-tile "which production moment" field, so a lighting state can say "Act 2 transformation" and sort by it.

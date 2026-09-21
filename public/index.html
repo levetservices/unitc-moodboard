@@ -38,12 +38,21 @@
   .pill:hover{color:var(--ink);border-color:var(--muted)}
   .pill[aria-pressed="true"]{background:var(--paper);color:var(--stage);border-color:var(--paper)}
 
-  .side-actions{margin-top:auto;display:grid;gap:6px;padding-top:20px;border-top:1px solid var(--line)}
-  .add{padding:12px;border-radius:var(--r);border:1px dashed var(--muted);font-weight:600}
-  .add:hover{border-style:solid;background:var(--wing)}
+  .side-actions{margin-top:auto;display:flex;flex-direction:column;gap:14px;padding-top:18px;border-top:1px solid var(--line)}
+  .tools{display:flex;flex-direction:column;gap:2px}
+  .tools:not(:has(button:not([hidden]))){display:none}
+  .add{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;margin-bottom:8px;border-radius:var(--r);background:var(--paper);color:var(--stage);font-weight:600}
+  .add:hover{background:#fff}
+  .navrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 14px;border-radius:var(--r);color:var(--muted);font-size:14px}
+  .navrow:hover{background:var(--wing);color:var(--ink)}
+  .add svg,.navrow svg{flex:none}
+  .account{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;min-height:32px}
+  .linkbtn{font-size:13px;color:var(--muted);padding:6px 0}
+  .linkbtn:hover{color:var(--ink)}
   .ghost{padding:10px;border-radius:var(--r);color:var(--muted);font-size:13px}
   .ghost:hover{color:var(--ink);background:var(--wing)}
-  .who{font-size:12px;color:var(--muted);text-align:center}
+  .who{font-size:12.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .who b{color:var(--ink);font-weight:600}
 
   .boardhead{display:flex;align-items:flex-end;padding:28px 32px;background:var(--stage) center/cover no-repeat;position:relative;min-height:96px}
   .boardhead.has-image{min-height:260px;padding:32px}
@@ -52,6 +61,25 @@
   .boardhead.has-image h2{font-size:46px;text-shadow:0 2px 24px rgba(0,0,0,.55)}
   .filterbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:20px 32px 18px;border-bottom:1px solid var(--line);margin-bottom:22px}
   .count{color:var(--muted);font-size:13px;flex:none}
+  .barend{display:flex;align-items:center;gap:14px;flex:none}
+
+  /* export sheet: built off screen, drawn to a PNG, then removed */
+  .exportwrap{position:fixed;left:-30000px;top:0;pointer-events:none}
+  .sheet{width:1600px;background:var(--stage);color:var(--ink);padding-bottom:48px}
+  .sheet-head{display:flex;flex-direction:column;justify-content:space-between;gap:48px;padding:44px 56px 36px;background:var(--stage) center/cover no-repeat;position:relative;border-bottom:1px solid var(--line)}
+  .sheet-head.has-image{min-height:340px}
+  .sheet-head.has-image::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,22,26,.35) 0%,rgba(20,22,26,.55) 50%,rgba(20,22,26,.94) 100%)}
+  .sheet-head>*{position:relative;z-index:1}
+  .sheet-head .logo{max-width:220px}
+  .sheet-wordmark{width:220px;display:flex;flex-direction:column;gap:4px;font-family:"Archivo","Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:37.6px;line-height:.86;color:var(--ink)}
+  .sheet-wordmark span{display:block;white-space:nowrap;transform-origin:0 50%}
+  .sheet-head h1{font-family:"Quando",Georgia,serif;font-weight:400;font-size:60px;line-height:1.05}
+  .sheet-meta{color:#c9c6bf;font-size:16px;margin-top:10px}
+  .sheet-board{columns:4;column-gap:16px;padding:32px 56px 0}
+  .sheet .tile .note{display:block;-webkit-line-clamp:unset;overflow:visible}
+  .sheet .vidph{aspect-ratio:16/9;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c2233,#0a0b0e);color:var(--ink);font-size:13px;padding:16px;text-align:center}
+  .sheet .vidph b{width:48px;height:48px;border-radius:50%;background:var(--paper);color:var(--stage);display:grid;place-items:center;font-size:16px}
+  .sheet .vidph span{color:var(--muted);font-size:12px;word-break:break-all}
   .board,.empty{margin-left:32px;margin-right:32px}
 
   .board{columns:3;column-gap:14px}
@@ -156,11 +184,15 @@
     </svg>
     <nav class="prods" id="prods"></nav>
     <div class="side-actions">
-      <button class="ghost" id="boardBtn" hidden>Add or edit productions</button>
-      <button class="add" id="addBtn" hidden>Add a tile</button>
-      <button class="ghost" id="gelBtn" hidden>Manage gels and colours</button>
-      <button class="ghost" id="authBtn">Sign in to edit</button>
-      <p class="who" id="who"></p>
+      <div class="tools">
+        <button class="add" id="addBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Add a tile</button>
+        <button class="navrow" id="boardBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 2 2 5l6 3 6-3-6-3Z"/><path d="m2 8 6 3 6-3"/><path d="m2 11 6 3 6-3"/></svg>Edit productions</button>
+        <button class="navrow" id="gelBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 1 0 11Z" fill="currentColor" stroke="none"/></svg>Edit gels and colours</button>
+      </div>
+      <div class="account">
+        <span class="who" id="who" hidden></span>
+        <button class="linkbtn" id="authBtn">Sign in to edit</button>
+      </div>
     </div>
   </aside>
   <main>
@@ -169,7 +201,10 @@
     </header>
     <div class="filterbar">
       <div class="filters" id="filters"></div>
-      <span class="count" id="count"></span>
+      <div class="barend">
+        <span class="count" id="count"></span>
+        <button class="btn" id="exportBtn" hidden>Export board as image</button>
+      </div>
     </div>
     <div class="board" id="board"><p class="empty">Loading the board.</p></div>
   </main>
@@ -177,6 +212,7 @@
 <div class="overlay" id="overlay" hidden><div class="modal" role="dialog" aria-modal="true" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="vendor/html-to-image.js"></script>
 <script>
 /* ---------- constants ---------- */
 const FILTERS = ["all","lighting","sound","video","colour","reference","links","files","notes"];
@@ -240,6 +276,86 @@ function initPlayers(root){
     root.addEventListener(ev,e=>{ const w=e.target.closest?.(".player"); if(w) paintPlayer(w); },true));
 }
 
+/* ---------- export ---------- */
+// Stands in for any picture the browser is not allowed to copy (another site's image
+// without CORS headers), so one blocked image can't sink the whole export.
+const IMG_PLACEHOLDER="data:image/svg+xml;charset=utf-8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#2a2e36"/><text x="200" y="155" fill="#8b8f98" font-family="sans-serif" font-size="16" text-anchor="middle">Image could not be included</text></svg>');
+
+const withTimeout=(p,ms,msg="Timed out")=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(msg)),ms))]);
+
+// Draws every tile on a board, whatever the filter says, onto one dated sheet
+// and returns it as a PNG blob.
+async function buildBoardImage(b){
+  if(!window.htmlToImage) throw new Error("The export tool did not load. Refresh and try again.");
+  const list=tiles.filter(t=>t.board_id===b.id).sort((x,y)=>(y.pinned?1:0)-(x.pinned?1:0)||x.sort-y.sort);
+  const date=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
+  const meta=[b.kind,`${list.length} tile${list.length===1?"":"s"}`,`exported ${date}`].filter(Boolean).join(", ");
+  const wrap=document.createElement("div"); wrap.className="exportwrap"; wrap.setAttribute("aria-hidden","true");
+  wrap.innerHTML=`<div class="sheet"><header class="sheet-head${b.image?" has-image":""}"><div class="sheet-logo"></div>
+    <div><h1>${esc(b.name)}</h1><p class="sheet-meta">${esc(meta)}</p></div></header>
+    <div class="sheet-board">${list.map(t=>tileHTML(t,true)).join("")||'<p class="empty">No tiles yet.</p>'}</div></div>`;
+  const sheet=wrap.firstElementChild;
+  if(b.image) sheet.querySelector(".sheet-head").style.backgroundImage=`url("${encodeURI(b.image)}")`;
+  if($("#logo").complete&&$("#logo").naturalWidth){
+    const logo=$("#logo").cloneNode(); logo.removeAttribute("id"); logo.removeAttribute("onerror");
+    sheet.querySelector(".sheet-logo").append(logo);
+  }else sheet.querySelector(".sheet-logo").append(wordmarkForExport());
+  // Embedded players and unplayed videos have nothing to draw, so each becomes a card naming its source.
+  sheet.querySelectorAll("iframe,video").forEach(el=>{
+    const d=tiles.find(t=>t.id===el.closest(".tile")?.dataset.id)?.data||{};
+    let src=d.name||""; if(!src){ try{ src=new URL(d.url,location.href).hostname.replace(/^www\./,""); }catch{} }
+    const card=document.createElement("div"); card.className="vidph";
+    card.innerHTML=`<b>&#9654;</b>Video<span>${esc(src)}</span>`;
+    el.replaceWith(card);
+  });
+  sheet.querySelectorAll("audio").forEach(a=>a.remove());
+  // Tiles lazy-load their images, and lazy images parked off screen never load,
+  // which left the export waiting forever on any board with a photo on it.
+  sheet.querySelectorAll("img").forEach(i=>i.loading="eager");
+  document.body.append(wrap);
+  try{
+    await document.fonts.ready;
+    // A slow or dead image host gets 6 seconds. Anything still not loaded is swapped
+    // for the placeholder here, or the export library tries to fetch it all over again
+    // with no time limit (a dead host cost a further 27 seconds in testing).
+    const imgs=[...sheet.querySelectorAll("img")];
+    await Promise.all(imgs.map(i=>withTimeout(i.decode(),6000).catch(()=>{})));
+    imgs.forEach(i=>{ if(!i.complete||!i.naturalWidth) i.src=IMG_PLACEHOLDER; });
+    // Twice the pixels for sharp text, backing off on a very long board so the
+    // canvas stays inside what browsers will allocate.
+    const w=sheet.offsetWidth, h=sheet.offsetHeight;
+    const pixelRatio=Math.max(1,Math.min(2,30000/h,Math.sqrt(2.4e8/(w*h))));
+    const blob=await withTimeout(htmlToImage.toBlob(sheet,{pixelRatio,backgroundColor:"#14161a",imagePlaceholder:IMG_PLACEHOLDER}),60000,
+      "The export took too long. A picture on this board may be on a slow site.");
+    if(!blob) throw new Error("This board is too big to fit in one image.");
+    return blob;
+  }finally{ wrap.remove(); }
+}
+// The export library does not carry fonts or weights into SVG <text>, so the drawn
+// wordmark comes out thin and wrong. Rebuild it as HTML: each line measured in the
+// loaded face, then stretched to the same width, which is what textLength does live.
+function wordmarkForExport(){
+  const W=220, size=37.6, ctx=document.createElement("canvas").getContext("2d");
+  ctx.font=`700 ${size}px Archivo`;
+  const el=document.createElement("div"); el.className="sheet-wordmark";
+  el.innerHTML=["PRODUCTION","ARTS PRACTICE"].map(t=>
+    `<span style="transform:scaleX(${(W/ctx.measureText(t).width).toFixed(4)})">${t}</span>`).join("");
+  return el;
+}
+async function exportBoard(){
+  const b=boards.find(x=>x.id===current); if(!b) return;
+  const btn=$("#exportBtn"); btn.disabled=true; btn.textContent="Exporting";
+  try{
+    const blob=await buildBoardImage(b);
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`${b.id}-moodboard-${new Date().toISOString().slice(0,10)}.png`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+    toast("Board exported");
+  }catch(err){ toast(err.message||"Export failed"); }
+  finally{ btn.disabled=false; btn.textContent="Export board as image"; }
+}
+
 /* ---------- api ---------- */
 async function api(method, path, body){
   const r = await fetch(path,{method,headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined,credentials:"same-origin"});
@@ -269,9 +385,9 @@ async function loadAll(){
 function renderSidebar(){
   $("#prods").innerHTML = boards.map(b=>`<button class="prod" data-k="${esc(b.id)}" aria-pressed="${b.id===current}"><span class="n">${esc(b.name)}</span><span class="c">${esc(b.kind||"")}</span></button>`).join("");
   $("#filters").innerHTML = FILTERS.map(f=>`<button class="pill" data-f="${f}" aria-pressed="${f===filter}">${f[0].toUpperCase()+f.slice(1)}</button>`).join("");
-  $("#addBtn").hidden=!canEdit(); $("#gelBtn").hidden=!canEdit(); $("#boardBtn").hidden=!canEdit();
+  $("#addBtn").hidden=!canEdit(); $("#gelBtn").hidden=!canEdit(); $("#boardBtn").hidden=!canEdit(); $("#exportBtn").hidden=!canEdit();
   $("#authBtn").textContent = user ? "Sign out" : "Sign in to edit";
-  $("#who").textContent = user ? `Editing as ${user}` : "";
+  $("#who").innerHTML = user ? `Signed in as <b>${esc(user)}</b>` : ""; $("#who").hidden=!user;
 }
 function media(t){
   const d=t.data||{};
@@ -446,6 +562,7 @@ $("#prods").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); 
 $("#filters").addEventListener("click",e=>{ const b=e.target.closest("[data-f]"); if(!b) return; filter=b.dataset.f; renderAll(); });
 $("#addBtn").addEventListener("click",()=>{ if(!current){ toast("Add a production first"); return; } openAdd(); });
 $("#gelBtn").addEventListener("click",openGels);
+$("#exportBtn").addEventListener("click",exportBoard);
 $("#boardBtn").addEventListener("click",openBoards);
 $("#authBtn").addEventListener("click",async()=>{ if(user){ await api("POST","/api/logout"); user=null; renderAll(); toast("Signed out"); } else openAuth(); });
 
