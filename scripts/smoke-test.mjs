@@ -46,6 +46,19 @@ try {
   check(r.json.data.path === up.path, "tile updated with uploaded file");
   const rf = await fetch(base + up.url);
   check(rf.status === 200 && (await rf.text()) === "hello", "uploaded file is served publicly");
+  r = await call("POST", "/api/tiles/import", { board_id: boardId, tiles: [
+    { type: "note", title: "From CSV", note: "row one", tag: "notes" },
+    { type: "light", title: "Imported wash", tag: "lighting", data: { gel: "L201", hex: "#7fa6d9" } }] });
+  check(r.status === 200 && r.json.tiles.length === 2 && r.json.tiles[0].sort === 0, "csv import creates tiles in file order");
+  r = await call("GET", "/api/state");
+  const moved = r.json.tiles.find(t => t.id === tileId);
+  check(moved.sort === 2, "import pushes existing tiles down the board");
+  r = await call("POST", "/api/tiles/import", { board_id: boardId, tiles: [{ type: "note", title: "ok" }, { type: "nonsense", title: "bad" }] });
+  check(r.status === 400, "import rejects an unknown tile type");
+  r = await call("GET", "/api/state");
+  check(!r.json.tiles.some(t => t.title === "ok"), "a rejected import writes nothing at all");
+  r = await call("POST", "/api/tiles", { board_id: boardId, type: "link", title: "Bad link", data: { url: "javascript:alert(1)" } });
+  check(r.status === 200 && r.json.data.url === undefined, "unsafe url is stripped from tile data");
   r = await call("POST", "/api/gels", { code: "wash-a", name: "House wash", rgbw: { r: 255, g: 180, b: 80, w: 120 }, hex: "#ffd39a" });
   check(r.status === 200 && r.json.code === "WASH-A" && r.json.rgbw.w === 120, "RGBW gel created");
   r = await call("POST", "/api/gels", { code: "WASH-A", hex: "#ffffff" });

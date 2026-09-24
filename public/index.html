@@ -155,6 +155,11 @@
   .gelchip i{width:16px;height:16px;border-radius:50%;display:block}
   .gelchip .rm{color:var(--muted);font-size:14px;line-height:1;padding:0 2px}
   .err{color:var(--danger);font-size:13px}
+  .imp{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px}
+  .imp th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;padding:0 10px 6px 0}
+  .imp td{padding:5px 10px;border-top:1px solid var(--line);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .imp td:first-child,.imp th:first-child{padding-left:0}
+  .imp-problems{margin:12px 0 0;padding-left:18px;color:var(--danger);font-size:12.5px;display:grid;gap:3px}
   .hint{font-size:12px;color:var(--muted)}
 
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper);color:var(--stage);padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:60}
@@ -188,6 +193,7 @@
         <button class="add" id="addBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Add a tile</button>
         <button class="navrow" id="boardBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 2 2 5l6 3 6-3-6-3Z"/><path d="m2 8 6 3 6-3"/><path d="m2 11 6 3 6-3"/></svg>Edit productions</button>
         <button class="navrow" id="gelBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 1 0 11Z" fill="currentColor" stroke="none"/></svg>Edit gels and colours</button>
+        <button class="navrow" id="importBtn" hidden><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v7"/><path d="m5 6.5 3 3 3-3"/><path d="M2.5 11v2.5h11V11"/></svg>Import tiles from CSV</button>
       </div>
       <div class="account">
         <span class="who" id="who" hidden></span>
@@ -385,7 +391,7 @@ async function loadAll(){
 function renderSidebar(){
   $("#prods").innerHTML = boards.map(b=>`<button class="prod" data-k="${esc(b.id)}" aria-pressed="${b.id===current}"><span class="n">${esc(b.name)}</span><span class="c">${esc(b.kind||"")}</span></button>`).join("");
   $("#filters").innerHTML = FILTERS.map(f=>`<button class="pill" data-f="${f}" aria-pressed="${f===filter}">${f[0].toUpperCase()+f.slice(1)}</button>`).join("");
-  $("#addBtn").hidden=!canEdit(); $("#gelBtn").hidden=!canEdit(); $("#boardBtn").hidden=!canEdit(); $("#exportBtn").hidden=!canEdit();
+  $("#addBtn").hidden=!canEdit(); $("#gelBtn").hidden=!canEdit(); $("#boardBtn").hidden=!canEdit(); $("#exportBtn").hidden=!canEdit(); $("#importBtn").hidden=!canEdit();
   $("#authBtn").textContent = user ? "Sign out" : "Sign in to edit";
   $("#who").innerHTML = user ? `Signed in as <b>${esc(user)}</b>` : ""; $("#who").hidden=!user;
 }
@@ -494,6 +500,113 @@ async function collectData(type,existing={}){
   return d;
 }
 
+/* ---------- csv import ---------- */
+let importQueue=[];
+const TYPE_WORDS={light:"light",lighting:"light",sound:"sound",audio:"sound",video:"video",image:"image",photo:"image",picture:"image",palette:"palette",colour:"palette",color:"palette",link:"link",file:"file",document:"file",note:"note",notes:"note"};
+const normHex=v=>{
+  v=(v||"").trim();
+  if(/^[0-9a-f]{3}$/i.test(v)||/^[0-9a-f]{6}$/i.test(v)) v="#"+v;
+  if(/^#[0-9a-f]{3}$/i.test(v)) v="#"+v.slice(1).split("").map(c=>c+c).join("");
+  return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():"";
+};
+// Full CSV, not a split on commas: quoted fields can hold commas and line breaks,
+// "" is an escaped quote, and files off a Mac or Windows can arrive with either
+// line ending and a byte order mark in front.
+function parseCSV(text){
+  const rows=[]; let row=[], field="", quoted=false;
+  text=text.replace(/^﻿/,"");
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(quoted){
+      if(c!=='"') field+=c;
+      else if(text[i+1]==='"'){ field+='"'; i++; }
+      else quoted=false;
+    }
+    else if(c==='"') quoted=true;
+    else if(c===",") { row.push(field); field=""; }
+    else if(c==="\n"||c==="\r"){ if(c==="\r"&&text[i+1]==="\n") i++; row.push(field); field=""; rows.push(row); row=[]; }
+    else field+=c;
+  }
+  if(field!==""||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(v=>v.trim()!==""));
+}
+function readImport(text){
+  const rows=parseCSV(text);
+  if(!rows.length) return {error:"That file is empty."};
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const at=(...names)=>{ for(const nm of names){ const i=head.indexOf(nm); if(i>=0) return i; } return -1; };
+  const col={type:at("type"),title:at("title","name"),note:at("note","description"),tag:at("tag"),
+    gel:at("gel","code"),hex:at("hex","colour","color"),colours:at("colours","colors","palette"),url:at("url","link")};
+  if(col.type<0) return {error:'The first line needs column names, and one of them must be "type". Download the template to see the layout.'};
+  const cell=(r,k)=>col[k]>=0?(r[col[k]]||"").trim():"";
+  const tilesOut=[], problems=[];
+  rows.slice(1).forEach((r,i)=>{
+    const line=i+2, word=cell(r,"type").toLowerCase(), type=TYPE_WORDS[word];
+    if(!type) return problems.push(`Line ${line}: ${word?`"${esc(word)}" is not a tile type`:"no type given"}`);
+    const t={type,title:cell(r,"title")||"Untitled",note:cell(r,"note"),data:{}};
+    const tag=cell(r,"tag").toLowerCase();
+    t.tag=(tag&&tag!=="all"&&FILTERS.includes(tag))?tag:TYPES[type].tag;
+    const url=cell(r,"url");
+    if(url){
+      if(!/^(https?:\/\/|\/uploads\/)/i.test(url)) return problems.push(`Line ${line}: the link must start with http:// or https://`);
+      t.data.url=url;
+    }
+    if(type==="link"&&!t.data.url) return problems.push(`Line ${line}: a link tile needs a url`);
+    if(type==="light"){
+      const code=cell(r,"gel").toUpperCase(), g=code?gelByCode(code):null, hex=normHex(cell(r,"hex"));
+      if(g){ t.data.gel=g.code; t.data.hex=g.hex; if(g.rgbw) t.data.rgbw=g.rgbw; }
+      else if(hex){ t.data.gel=code; t.data.hex=hex; }
+      else return problems.push(`Line ${line}: ${code?`gel ${esc(code)} is not in your list, add it first or give a hex colour`:"a lighting tile needs a gel code or a hex colour"}`);
+    }
+    if(type==="palette"){
+      const colors=cell(r,"colours").split(/[,;\s]+/).map(normHex).filter(Boolean).slice(0,12);
+      if(!colors.length) return problems.push(`Line ${line}: a palette tile needs hex colours, for example "#3a2f28 #c9902e"`);
+      t.data.colors=colors;
+    }
+    tilesOut.push(t);
+  });
+  return {tiles:tilesOut,problems};
+}
+function importTemplate(){
+  const rows=[["type","title","note","tag","gel","hex","colours","url"],
+    ["light","Ballroom wash","Warm golds from the front, LEE 134 on the top bars.","lighting","L134","","",""],
+    ["light","House blue","A gel you have not added yet, so give it a hex colour.","lighting","","#1b3fa0","",""],
+    ["sound","Midnight clock","Twelve chimes, slowed and pitched down.","sound","","","","https://example.com/chimes.mp3"],
+    ["palette","Kitchen to ballroom","Dull to bright.","colour","","","#3a2f28 #6b5a44 #c9902e #f2c14e",""],
+    ["note","Transformation","Slow blue build, strobe at the peak, then snap to the ballroom state.","notes","","","",""]];
+  const csv=rows.map(r=>r.map(v=>/[",\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v).join(",")).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="moodboard-import-template.csv"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+}
+function showImportPreview(res){
+  const box=$("#imp-body");
+  if(res.error){ importQueue=[]; box.innerHTML=`<p class="err">${esc(res.error)}</p>`; return; }
+  importQueue=res.tiles;
+  const shown=res.tiles.slice(0,8).map(t=>`<tr><td>${esc(t.type)}</td><td>${esc(t.title)}</td><td>${esc(t.tag)}</td></tr>`).join("");
+  box.innerHTML=`<p class="hint">${res.tiles.length} tile${res.tiles.length===1?"":"s"} ready to add${res.problems.length?`, ${res.problems.length} row${res.problems.length===1?"":"s"} skipped`:""}.</p>
+    ${res.tiles.length?`<table class="imp"><thead><tr><th>Type</th><th>Title</th><th>Tag</th></tr></thead><tbody>${shown}</tbody></table>
+      ${res.tiles.length>8?`<p class="hint">and ${res.tiles.length-8} more</p>`:""}`:""}
+    ${res.problems.length?`<ul class="imp-problems">${res.problems.slice(0,10).map(x=>`<li>${x}</li>`).join("")}${res.problems.length>10?`<li>and ${res.problems.length-10} more</li>`:""}</ul>`:""}
+    <div class="actions"><span></span><button class="btn primary" data-import ${res.tiles.length?"":"disabled"}>Add ${res.tiles.length} tile${res.tiles.length===1?"":"s"} to the board</button></div>`;
+}
+function openImport(){
+  importQueue=[];
+  openModal(`<header><h2>Import tiles from CSV</h2><button class="x" data-close aria-label="Close">&times;</button></header>
+    <p class="hint">One row per tile, going onto ${esc(boards.find(b=>b.id===current)?.name||"this board")}. Columns: type, title, note, tag, gel, hex, colours, url. Only type has to be filled in, the rest depend on the tile.</p>
+    <div class="field"><label for="imp-file">CSV file</label><input id="imp-file" type="file" accept=".csv,text/csv"></div>
+    <button class="ghost" id="imp-tpl" style="justify-self:start">Download a template</button>
+    <div id="imp-body"></div>
+    <p class="err" id="f-err"></p>`);
+  $("#imp-tpl").addEventListener("click",importTemplate);
+  $("#imp-file").addEventListener("change",async e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    try{ showImportPreview(readImport(await f.text())); }
+    catch(err){ $("#f-err").textContent="Could not read that file. "+(err.message||""); }
+  });
+}
+
 function openGels(){
   const chips=gels.map(g=>`<span class="gelchip"><i style="background:${esc(g.hex)}"></i>${esc(g.code)}${g.name?" "+esc(g.name):""}<button class="rm" data-rmgel="${esc(g.id)}" aria-label="Remove ${esc(g.code)}">&times;</button></span>`).join("");
   openModal(`<header><h2>Gels and colours</h2><button class="x" data-close aria-label="Close">&times;</button></header>
@@ -562,6 +675,7 @@ $("#prods").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); 
 $("#filters").addEventListener("click",e=>{ const b=e.target.closest("[data-f]"); if(!b) return; filter=b.dataset.f; renderAll(); });
 $("#addBtn").addEventListener("click",()=>{ if(!current){ toast("Add a production first"); return; } openAdd(); });
 $("#gelBtn").addEventListener("click",openGels);
+$("#importBtn").addEventListener("click",()=>{ if(!current){ toast("Add a production first"); return; } openImport(); });
 $("#exportBtn").addEventListener("click",exportBoard);
 $("#boardBtn").addEventListener("click",openBoards);
 $("#authBtn").addEventListener("click",async()=>{ if(user){ await api("POST","/api/logout"); user=null; renderAll(); toast("Signed out"); } else openAuth(); });
@@ -602,6 +716,11 @@ $("#overlay").addEventListener("click",async e=>{
       const data=await collectData(type);
       const t=await api("POST","/api/tiles",{board_id:current,type,tag:$("#f-tag").value,title:$("#f-title").value.trim()||"Untitled",note:$("#f-note").value.trim(),data});
       boardTiles().forEach(x=>x.sort+=1); tiles.push(t); closeModal(); filter="all"; renderAll(); toast("Added to board"); }
+    else if(btn?.dataset.import!==undefined){ busy();
+      const r=await api("POST","/api/tiles/import",{board_id:current,tiles:importQueue});
+      boardTiles().forEach(x=>x.sort+=r.tiles.length);
+      tiles.push(...r.tiles); importQueue=[]; closeModal(); filter="all"; renderAll();
+      toast(`${r.tiles.length} tile${r.tiles.length===1?"":"s"} added`); }
     else if(btn?.dataset.addgel!==undefined){ const code=$("#g-code").value.trim().toUpperCase(); if(!code){ err.textContent="Give the gel a code."; return; }
       const mode=$("#g-mode").value; const body={code,name:$("#g-name").value.trim()};
       if(mode==="hex") body.hex=$("#g-hex").value;

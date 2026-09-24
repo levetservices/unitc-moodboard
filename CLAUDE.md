@@ -39,7 +39,7 @@ Tile `type` is one of `light, sound, video, image, palette, link, file, note`. T
 
 Tile `data` is JSON, validated by `cleanData()` in `server/index.js`. Fields in use:
 
-- `url` (external link or `/uploads/...`), `path` (only set for uploads, used to delete the file), `name`, `mime`
+- `url` (external link or `/uploads/...`), `path` (only set for uploads, used to delete the file), `name`, `mime`. `safeUrl()` allows only http, https and our own `/uploads/` paths: link and file tiles render as `<a href>`, so a `javascript:` url would otherwise be saved and become clickable.
 - `gel`, `hex`, `rgbw` `{r,g,b,w}` for light tiles (snapshotted from the gel at save time so deleting a gel doesn't break tiles)
 - `colors` array of hex for palette tiles
 
@@ -56,7 +56,7 @@ Board `id` is a slug from the name. Deleting a board cascades tiles and removes 
 ## API summary
 
 Reads are public: `GET /api/state` (everything in one call), `GET /api/me`.
-Writes need a session: boards (`POST`, `PUT /:id`, `DELETE /:id`, `PUT /:id/order`), tiles (`POST`, `PUT /:id`, `DELETE /:id`), gels (`POST`, `DELETE /:id`), `POST /api/upload?board=<id>` (multipart, field `file`), `POST /api/login`, `POST /api/logout`.
+Writes need a session: boards (`POST`, `PUT /:id`, `DELETE /:id`, `PUT /:id/order`), tiles (`POST`, `POST /import`, `PUT /:id`, `DELETE /:id`), gels (`POST`, `DELETE /:id`), `POST /api/upload?board=<id>` (multipart, field `file`), `POST /api/login`, `POST /api/logout`.
 
 Front end keeps state in memory, calls the API, and re-renders. `renderAll()` is sidebar plus board. Modals are one `#overlay` div filled with HTML strings; every modal action is a `data-*` attribute on a button handled in the single `#overlay` click listener.
 
@@ -72,6 +72,7 @@ Front end keeps state in memory, calls the API, and re-renders. `renderAll()` is
 - That fallback uses `removeAttribute("hidden")`, not `.hidden = false`. `hidden` is an `HTMLElement` property and `<svg>` is an `SVGElement`, so assigning to `.hidden` silently sets a useless JS expando while the attribute, and `[hidden]{display:none}`, stay put.
 - "Export board as image" (owner only, in the filter bar) builds `.sheet` off screen at 1600px wide: dated header with logo and banner, then EVERY tile on the board whatever the filter, pinned first, notes unclipped. `buildBoardImage()` turns it into a PNG at 2x, backing off on very long boards to stay inside browser canvas limits. Things with nothing to draw are swapped first: iframes and videos become a card naming the source, `<audio>` is dropped.
 - Export traps, each one hit in testing: tile images are `loading="lazy"`, and a lazy image parked off screen never loads, so the sheet forces `eager` or any board with a photo hangs forever. Images that still fail after 6 seconds are swapped for `IMG_PLACEHOLDER` before the library runs, or it refetches them with no time limit. The library drops fonts and weights on SVG `<text>`, so the fallback wordmark is rebuilt as HTML (`wordmarkForExport()`). A hidden tab pauses the render, which only matters when testing from a background pane.
+- CSV import (owner only) is all client side until the end: `parseCSV()` is a real parser (quoted commas, line breaks inside a cell, doubled quotes, CRLF, BOM), `readImport()` maps and checks rows and collects a problem per bad line, then a preview shows what would be added before anything is written. Only then does it POST the whole set to `/api/tiles/import`, which inserts in one transaction, so a rejected import writes nothing. Unknown tile types and gels that aren't in the gel list are skipped, not guessed at.
 - Sidebar owner tools are left-aligned to match the production list: one filled "Add a tile", then icon rows, then a single account line ("Signed in as ...", "Sign out"). Don't reintroduce centred ghost links.
 - Sound tiles with a file render `.wave.player`: a play button, 28 bars that double as a scrubber, and a hidden `<audio>`. `initPlayers()` binds one delegated capture listener per root (`#board` and `#overlay`) because `timeupdate` and friends don't bubble. Tiles without a file keep the decorative `.wave.static`.
 
@@ -89,7 +90,7 @@ Hayden's preferences, they matter:
 Nobody has asked for these yet. Confirm before building.
 
 1. Export every production in one go, or keep a server-side history of dated snapshots, if one board at a time gets tedious.
-2. Bulk upload (drop several photos, get several tiles).
+2. Bulk upload (drop several photos, get several tiles). CSV import covers the text side of this already; the gap is files.
 3. Search across tiles.
 4. Per-tile "which production moment" field, so a lighting state can say "Act 2 transformation" and sort by it.
 5. Optional second reader account (the tutor) with view-only login if the board is ever made private.

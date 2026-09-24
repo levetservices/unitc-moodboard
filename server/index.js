@@ -113,7 +113,7 @@ const TYPES = new Set(["light", "sound", "video", "image", "palette", "link", "f
 function cleanData(d) {
   if (!d || typeof d !== "object") return {};
   const out = {};
-  if (typeof d.url === "string" && d.url.length < 2000) out.url = d.url;
+  if (typeof d.url === "string" && d.url.length < 2000 && safeUrl(d.url)) out.url = d.url;
   if (typeof d.path === "string" && d.path.startsWith("/uploads/") && !d.path.includes("..")) out.path = d.path;
   if (typeof d.name === "string") out.name = d.name.slice(0, 200);
   if (typeof d.mime === "string") out.mime = d.mime.slice(0, 100);
@@ -122,6 +122,13 @@ function cleanData(d) {
   if (d.rgbw && typeof d.rgbw === "object") out.rgbw = cleanRgbw(d.rgbw);
   if (Array.isArray(d.colors)) out.colors = d.colors.filter(c => typeof c === "string" && /^#[0-9a-f]{3,8}$/i.test(c)).slice(0, 12);
   return out;
+}
+// Link and file tiles render as <a href>, so only real web links and our own uploads
+// are allowed through. Without this a "javascript:..." url would be saved and become
+// a clickable link on the board.
+function safeUrl(v) {
+  if (v.startsWith("/uploads/")) return !v.includes("..");
+  try { return ["http:", "https:"].includes(new URL(v).protocol); } catch { return false; }
 }
 function cleanRgbw(v) {
   const n = k => Math.max(0, Math.min(255, Math.round(+v[k] || 0)));
@@ -136,6 +143,31 @@ app.post("/api/tiles", (req, res) => {
   db.prepare("insert into tiles (id,board_id,type,title,note,tag,sort,pinned,data) values (?,?,?,?,?,?,0,?,?)")
     .run(id, board_id, type, str(req.body.title, 200) || "Untitled", str(req.body.note), str(req.body.tag, 40), req.body.pinned ? 1 : 0, JSON.stringify(cleanData(req.body.data)));
   res.json(rowTile(db.prepare("select * from tiles where id=?").get(id)));
+});
+// Bulk create from a CSV import. One request and one transaction, so a board never
+// ends up half imported. Rows keep their file order and land at the top of the board,
+// which is where a freshly added tile goes anyway.
+const MAX_IMPORT = 500;
+app.post("/api/tiles/import", (req, res) => {
+  const board_id = str(req.body.board_id, 60);
+  if (!db.prepare("select 1 from boards where id=?").get(board_id)) return res.status(400).json({ error: "Unknown board." });
+  const rows = Array.isArray(req.body.tiles) ? req.body.tiles : [];
+  if (!rows.length) return res.status(400).json({ error: "Nothing to import." });
+  if (rows.length > MAX_IMPORT) return res.status(400).json({ error: `Too many rows at once. The limit is ${MAX_IMPORT}.` });
+  const bad = rows.findIndex(r => !r || !TYPES.has(r.type));
+  if (bad !== -1) return res.status(400).json({ error: `Row ${bad + 1} has an unknown tile type.` });
+
+  const ins = db.prepare("insert into tiles (id,board_id,type,title,note,tag,sort,pinned,data) values (?,?,?,?,?,?,?,0,?)");
+  const made = db.transaction(() => {
+    db.prepare("update tiles set sort = sort + ? where board_id=?").run(rows.length, board_id);
+    return rows.map((r, i) => {
+      const id = newId();
+      ins.run(id, board_id, r.type, str(r.title, 200) || "Untitled", str(r.note), str(r.tag, 40), i, JSON.stringify(cleanData(r.data)));
+      return id;
+    });
+  })();
+  const get = db.prepare("select * from tiles where id=?");
+  res.json({ tiles: made.map(id => rowTile(get.get(id))) });
 });
 app.put("/api/tiles/:id", (req, res) => {
   const t = db.prepare("select * from tiles where id=?").get(req.params.id);
